@@ -1,0 +1,880 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>CLA — Officina</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; background: #F1F5F9; color: #0F172A; min-height: 100vh; }
+
+/* HEADER */
+.header { background: #1A2F4B; padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; }
+.header h1 { color: white; font-size: 17px; font-weight: 700; }
+.header-sub { color: #94A3B8; font-size: 12px; }
+.tab-bar { background: #1A2F4B; display: flex; border-top: 1px solid #2D4A6A; }
+.tab { flex: 1; padding: 10px 4px; text-align: center; color: #94A3B8; font-size: 12px; font-weight: 600; cursor: pointer; border-bottom: 3px solid transparent; }
+.tab.active { color: white; border-bottom-color: #2563EB; }
+
+/* CONTENT */
+.content { padding: 16px; max-width: 700px; margin: 0 auto; }
+.card { background: white; border-radius: 12px; padding: 18px; margin-bottom: 14px; box-shadow: 0 1px 3px rgba(0,0,0,0.07); }
+.card-title { font-size: 13px; font-weight: 700; color: #64748B; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 14px; }
+.field { margin-bottom: 12px; }
+.field label { display: block; font-size: 13px; font-weight: 500; color: #475569; margin-bottom: 5px; }
+.field label span.req { color: #DC2626; }
+select, input[type="text"], input[type="number"], textarea {
+  width: 100%; padding: 11px 13px; border: 1.5px solid #E2E8F0; border-radius: 8px;
+  font-size: 15px; color: #0F172A; background: white; font-family: inherit;
+}
+select { appearance: none; -webkit-appearance: none; }
+textarea { resize: vertical; min-height: 70px; }
+select:focus, input:focus, textarea:focus { outline: none; border-color: #2563EB; }
+.row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+
+/* BUTTONS */
+.btn { width: 100%; padding: 14px; border: none; border-radius: 10px; font-size: 16px; font-weight: 600; cursor: pointer; margin-top: 6px; }
+.btn-primary { background: #1A2F4B; color: white; }
+.btn-green { background: #059669; color: white; }
+.btn-red { background: #DC2626; color: white; }
+.btn-orange { background: #D97706; color: white; }
+.btn-blue { background: #2563EB; color: white; }
+.btn:active { opacity: 0.85; }
+.btn:disabled { opacity: 0.4; }
+.btn-sm { padding: 8px 14px; font-size: 13px; border-radius: 8px; border: none; cursor: pointer; font-weight: 600; }
+
+/* CHECKLIST */
+.checklist { border: 1.5px solid #E2E8F0; border-radius: 8px; overflow: hidden; }
+.check-item { display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; border-bottom: 1px solid #F1F5F9; }
+.check-item:last-child { border-bottom: none; }
+.check-item input[type="checkbox"] { width: 18px; height: 18px; margin-top: 2px; cursor: pointer; flex-shrink: 0; }
+.check-item .check-label { flex: 1; font-size: 14px; color: #334155; }
+.check-item .check-code { width: 120px; padding: 4px 8px; border: 1px solid #E2E8F0; border-radius: 6px; font-size: 13px; flex-shrink: 0; }
+.check-item.checked { background: #F0FDF4; }
+.check-item.checked .check-label { color: #059669; font-weight: 500; }
+.check-header { background: #F8FAFC; padding: 8px 12px; font-size: 12px; font-weight: 700; color: #64748B; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid #E2E8F0; display: grid; grid-template-columns: 28px 1fr 120px; gap: 10px; }
+
+/* DASHBOARD */
+.machine-card { background: white; border-radius: 12px; margin-bottom: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.07); }
+.machine-header { padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.machine-info h3 { font-size: 15px; font-weight: 700; color: #0F172A; }
+.machine-info p { font-size: 13px; color: #64748B; margin-top: 2px; }
+.status-badge { padding: 5px 12px; border-radius: 20px; font-size: 11px; font-weight: 700; white-space: nowrap; }
+.s1 { background: #FEF9C3; color: #854D0E; } /* attesa diagnosi */
+.s2 { background: #FFFBEB; color: #92400E; } /* attesa offerta */
+.s3 { background: #FEF2F2; color: #991B1B; } /* attesa ordine */
+.s4 { background: #EFF6FF; color: #1D4ED8; } /* ordine fatto */
+.s5 { background: #FFF7ED; color: #9A3412; } /* mat. parziale */
+.s6 { background: #F0FDF4; color: #166534; } /* mat. arrivato */
+.s7 { background: #F0FDF4; color: #059669; } /* pronto riparazione */
+.s8 { background: #E0F2FE; color: #0369A1; } /* pronto riconsegna */
+.s9 { background: #F1F5F9; color: #475569; } /* chiusa */
+.machine-body { padding: 0 16px 14px; }
+.machine-detail { font-size: 13px; color: #64748B; margin-bottom: 4px; }
+.machine-detail strong { color: #334155; }
+.machine-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+.expand-btn { width: 100%; background: none; border: none; padding: 10px; font-size: 13px; color: #2563EB; cursor: pointer; text-align: center; }
+.machine-detail-full { display: none; padding: 12px 16px; background: #F8FAFC; border-top: 1px solid #F1F5F9; }
+.machine-detail-full.open { display: block; }
+
+/* TOAST */
+.toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: #1A2F4B; color: white; padding: 12px 24px; border-radius: 24px; font-size: 14px; font-weight: 500; opacity: 0; transition: opacity 0.3s; z-index: 999; white-space: nowrap; pointer-events: none; }
+.toast.show { opacity: 1; }
+
+/* MODAL */
+.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 100; overflow-y: auto; }
+.modal-overlay.open { display: block; }
+.modal { background: white; margin: 20px auto; max-width: 600px; border-radius: 16px; overflow: hidden; }
+.modal-header { background: #1A2F4B; padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; }
+.modal-header h2 { color: white; font-size: 16px; font-weight: 700; }
+.modal-close { background: none; border: none; color: #94A3B8; font-size: 24px; cursor: pointer; }
+.modal-body { padding: 20px; }
+
+/* LOADING */
+.loading { text-align: center; padding: 40px; color: #94A3B8; font-size: 15px; }
+.empty { text-align: center; padding: 40px; color: #94A3B8; font-size: 15px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <h1>🔧 CLA — Officina</h1>
+    <div class="header-sub" id="header-data"></div>
+  </div>
+  <button class="btn-sm btn-green" onclick="showModal('modal-nuova')">+ Nuova</button>
+</div>
+<div class="tab-bar">
+  <div class="tab active" onclick="showTab('dashboard')" id="tab-dashboard">📋 Dashboard</div>
+  <div class="tab" onclick="showTab('diagnosi')" id="tab-diagnosi">🔍 Diagnosi</div>
+  <div class="tab" onclick="showTab('riparazione')" id="tab-riparazione">🔧 Riparazione</div>
+  <div class="tab" onclick="showTab('francesca')" id="tab-francesca">📁 Francesca</div>
+</div>
+
+<!-- DASHBOARD -->
+<div id="page-dashboard" class="content">
+  <div id="dashboard-list"><div class="loading">Caricamento...</div></div>
+</div>
+
+<!-- DIAGNOSI -->
+<div id="page-diagnosi" class="content" style="display:none">
+  <div class="card">
+    <div class="card-title">Seleziona macchina da diagnosticare</div>
+    <div class="field">
+      <select id="diag-macchina-sel" onchange="loadDiagMacchina()">
+        <option value="">Seleziona macchina...</option>
+      </select>
+    </div>
+  </div>
+  <div id="diag-form" style="display:none">
+    <div class="card">
+      <div class="card-title">Dati diagnosi</div>
+      <div class="field">
+        <label>Tecnico <span class="req">*</span></label>
+        <select id="diag-tecnico">
+          <option value="">Seleziona...</option>
+          <option>Antonio Chialastri</option>
+          <option>Lo Piccolo Giuseppe</option>
+          <option>Giuseppe Argirò</option>
+          <option>Malizzi Stefano</option>
+          <option>Lorenzo Chialastri</option>
+        </select>
+      </div>
+      <div class="row2">
+        <div class="field"><label>Ore impiegate per test <span class="req">*</span></label><input type="number" id="diag-ore" placeholder="Es. 2" step="0.5" min="0"></div>
+        <div class="field"><label>Ore previste riparazione <span class="req">*</span></label><input type="number" id="diag-ore-prev" placeholder="Es. 4" step="0.5" min="0"></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Checklist materiale necessario</div>
+      <div class="field"><label style="font-size:12px;color:#94A3B8">Spunta i componenti da sostituire e inserisci il codice se disponibile</label></div>
+      <div class="checklist" id="diag-checklist">
+        <div class="check-header"><span>✓</span><span>Componente</span><span>Codice</span></div>
+      </div>
+      <div class="field" style="margin-top:12px">
+        <label>Note aggiuntive / Altro materiale</label>
+        <textarea id="diag-note" placeholder="Descrivi eventuali altri materiali necessari o note per l'offerta..."></textarea>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Tipo intervento</div>
+      <div class="field">
+        <select id="diag-tipo">
+          <option value="offerta">Fare offerta al cliente prima di procedere</option>
+          <option value="diretta">Riparazione diretta (cliente autorizza indipendentemente)</option>
+        </select>
+      </div>
+    </div>
+    <button class="btn btn-primary" onclick="salvaDiagnosi()">✓ Salva diagnosi</button>
+  </div>
+</div>
+
+<!-- RIPARAZIONE -->
+<div id="page-riparazione" class="content" style="display:none">
+  <div class="card">
+    <div class="card-title">Seleziona macchina da riparare</div>
+    <div class="field">
+      <select id="rip-macchina-sel" onchange="loadRipMacchina()">
+        <option value="">Seleziona macchina...</option>
+      </select>
+    </div>
+  </div>
+  <div id="rip-form" style="display:none">
+    <div class="card">
+      <div class="card-title">Dati riparazione</div>
+      <div class="field">
+        <label>Tecnico <span class="req">*</span></label>
+        <select id="rip-tecnico">
+          <option value="">Seleziona...</option>
+          <option>Antonio Chialastri</option>
+          <option>Lo Piccolo Giuseppe</option>
+          <option>Giuseppe Argirò</option>
+          <option>Malizzi Stefano</option>
+          <option>Lorenzo Chialastri</option>
+        </select>
+      </div>
+      <div class="row2">
+        <div class="field"><label>Ore riparazione <span class="req">*</span></label><input type="number" id="rip-ore" placeholder="Es. 4" step="0.5" min="0"></div>
+        <div class="field"><label>Ore riconsegna</label><input type="number" id="rip-ore-ric" placeholder="Es. 1" step="0.5" min="0"></div>
+      </div>
+      <div class="field"><label>Km riconsegna</label><input type="number" id="rip-km-ric" placeholder="Es. 25" min="0"></div>
+      <div class="field">
+        <label>Materiale effettivamente usato <span class="req">*</span></label>
+        <textarea id="rip-materiale" placeholder="Elenco materiale utilizzato con codici e quantità..."></textarea>
+      </div>
+      <div class="field">
+        <label>Note intervento</label>
+        <textarea id="rip-note" placeholder="Note sulla riparazione..."></textarea>
+      </div>
+    </div>
+    <button class="btn btn-green" onclick="salvaRiparazione()">✓ Chiudi riparazione e genera PDF</button>
+  </div>
+</div>
+
+<!-- FRANCESCA -->
+<div id="page-francesca" class="content" style="display:none">
+  <div class="card">
+    <div class="card-title">Aggiorna stato lavorazione</div>
+    <div class="field">
+      <select id="fran-macchina-sel" onchange="loadFranMacchina()">
+        <option value="">Seleziona macchina...</option>
+      </select>
+    </div>
+  </div>
+  <div id="fran-form" style="display:none">
+    <div class="card">
+      <div class="card-title" id="fran-mac-title">—</div>
+      <div class="field">
+        <label>Aggiorna stato a</label>
+        <select id="fran-stato">
+          <option value="ATTESA OFFERTA/ORDINE">Offerta/Ordine da fare</option>
+          <option value="OFFERTA FATTA">Offerta fatta — attesa risposta cliente</option>
+          <option value="ORDINE FATTO">Ordine fatto — attesa materiale</option>
+          <option value="MATERIALE PARZIALE">Materiale parzialmente arrivato</option>
+          <option value="MATERIALE ARRIVATO">Materiale tutto arrivato — pronto per riparazione</option>
+          <option value="PRONTO RICONSEGNA">Pronto per riconsegna</option>
+        </select>
+      </div>
+      <div class="field" id="fran-dettaglio-wrap" style="display:none">
+        <label>Dettaglio materiale mancante</label>
+        <textarea id="fran-dettaglio" placeholder="Cosa manca ancora..."></textarea>
+      </div>
+      <button class="btn btn-primary" onclick="salvaStatoFrancesca()">✓ Aggiorna stato</button>
+    </div>
+    <div class="card" id="fran-pdf-card" style="display:none">
+      <div class="card-title">Report per offerta</div>
+      <p style="font-size:14px;color:#64748B;margin-bottom:12px">Genera il PDF con i dati della diagnosi da usare per preparare l'offerta commerciale.</p>
+      <button class="btn btn-blue" onclick="generaPDFOfferta()">📄 Genera PDF offerta</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL NUOVA MACCHINA -->
+<div class="modal-overlay" id="modal-nuova">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>Nuova macchina in officina</h2>
+      <button class="modal-close" onclick="closeModal('modal-nuova')">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="field">
+        <label>Tipo macchina <span class="req">*</span></label>
+        <select id="nm-tipo" onchange="onTipoChange()">
+          <option value="">Seleziona...</option>
+          <option value="Compressore a vite">Compressore a vite</option>
+          <option value="Compressore a pistoni">Compressore a pistoni</option>
+          <option value="Essiccatore">Essiccatore</option>
+          <option value="Pompa del vuoto">Pompa del vuoto</option>
+        </select>
+      </div>
+      <div class="row2">
+        <div class="field"><label>Marca <span class="req">*</span></label><input type="text" id="nm-marca" placeholder="Es. Atlas Copco"></div>
+        <div class="field"><label>Modello <span class="req">*</span></label><input type="text" id="nm-modello" placeholder="Es. GA11"></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label>Matricola</label><input type="text" id="nm-matricola" placeholder="Es. ATC12345"></div>
+        <div class="field"><label>Ore macchina</label><input type="number" id="nm-ore" placeholder="Es. 8500" min="0"></div>
+      </div>
+      <div class="field"><label>Cliente <span class="req">*</span></label><input type="text" id="nm-cliente" placeholder="Ragione sociale cliente"></div>
+      <div class="field"><label>Problema dichiarato <span class="req">*</span></label><textarea id="nm-problema" placeholder="Descrizione del problema riferita dal cliente..."></textarea></div>
+      <div class="field"><label>Data entrata <span class="req">*</span></label><input type="text" id="nm-data" placeholder="Es. 11/08/2026"></div>
+      <div class="field">
+        <label>Tecnico ritiro <span class="req">*</span></label>
+        <select id="nm-tecnico">
+          <option value="">Seleziona...</option>
+          <option>Antonio Chialastri</option>
+          <option>Lo Piccolo Giuseppe</option>
+          <option>Giuseppe Argirò</option>
+          <option>Malizzi Stefano</option>
+          <option>Lorenzo Chialastri</option>
+        </select>
+      </div>
+      <div class="row2">
+        <div class="field"><label>Ore per ritiro</label><input type="number" id="nm-ore-ritiro" placeholder="Es. 1.5" step="0.5" min="0"></div>
+        <div class="field"><label>Km per ritiro</label><input type="number" id="nm-km-ritiro" placeholder="Es. 30" min="0"></div>
+      </div>
+      <button class="btn btn-primary" onclick="salvaNuova()">✓ Registra macchina</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL DETTAGLIO -->
+<div class="modal-overlay" id="modal-dettaglio">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="det-title">Dettaglio macchina</h2>
+      <button class="modal-close" onclick="closeModal('modal-dettaglio')">×</button>
+    </div>
+    <div class="modal-body" id="det-body"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+var SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbx8MWSHI7CKfbccITAbOu1H1VdFABNe5FILVkHNCEm5Aob_1ha0SODsaujWJ3EnBLq2/exec';
+
+var macchine = [];
+var selectedId = null;
+
+// Header data
+var oggi = new Date();
+document.getElementById('header-data').textContent = oggi.toLocaleDateString('it-IT',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+
+// Checklist per tipo macchina
+var CHECKLIST = {
+  'Compressore a vite': [
+    'Sostituzione filtro olio',
+    'Sostituzione filtro aria',
+    'Sostituzione filtro separatore',
+    'Sostituzione cinghie',
+    'Sostituzione cuscinetti motore elettrico',
+    'Sostituzione olio',
+    'Sostituzione tubo mandata',
+    'Sostituzione tubo iniezione',
+    'Revisione gruppo vite',
+    'Revisione valvola di aspirazione',
+    'Revisione valvola termostatica',
+    'Revisione valvola stop-olio',
+    'Revisione valvola di minima pressione',
+    'Sostituzione paraolio',
+    'Sostituzione kit tubi',
+    'Sostituzione sonda temperatura',
+    'Sostituzione pannelli',
+    'Sostituzione spugna',
+    'Sostituzione scaricatore condensa',
+    'Pulizia circuito interno',
+    'Pulizia scambiatore',
+    'Pulizia compressore',
+  ],
+  'Compressore a pistoni': ['Da aggiungere'],
+  'Essiccatore': ['Da aggiungere'],
+  'Pompa del vuoto': ['Da aggiungere'],
+};
+
+var STATUS_MAP = {
+  'ATTESA DIAGNOSI': {cls:'s1', label:'⏳ Attesa diagnosi'},
+  'ATTESA OFFERTA/ORDINE': {cls:'s2', label:'📋 Attesa offerta/ordine'},
+  'OFFERTA FATTA': {cls:'s3', label:'📤 Offerta fatta'},
+  'ORDINE FATTO': {cls:'s4', label:'📦 Ordine fatto'},
+  'MATERIALE PARZIALE': {cls:'s5', label:'⚠ Mat. parziale'},
+  'MATERIALE ARRIVATO': {cls:'s6', label:'✅ Mat. arrivato'},
+  'PRONTO PER RIPARAZIONE': {cls:'s7', label:'🔧 Pronto riparazione'},
+  'PRONTO RICONSEGNA': {cls:'s8', label:'🚚 Pronto riconsegna'},
+  'CHIUSA': {cls:'s9', label:'✓ Chiusa'},
+};
+
+function showTab(tab) {
+  ['dashboard','diagnosi','riparazione','francesca'].forEach(function(t){
+    document.getElementById('page-'+t).style.display = t===tab?'block':'none';
+    document.getElementById('tab-'+t).classList.toggle('active', t===tab);
+  });
+  if(tab==='dashboard') loadDashboard();
+  if(tab==='diagnosi' || tab==='riparazione' || tab==='francesca') populateSelects();
+}
+
+function showModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+function showToast(msg) {
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(function(){ t.classList.remove('show'); }, 3000);
+}
+
+// ── CARICA DATI ──
+function loadDashboard() {
+  document.getElementById('dashboard-list').innerHTML = '<div class="loading">Caricamento...</div>';
+  var img = new Image();
+  img.src = SCRIPT_URL + '?action=getAll&t=' + Date.now();
+  
+  fetch(SCRIPT_URL + '?action=getAll&t=' + Date.now())
+    .then(function(r){ return r.json(); })
+    .then(function(data){
+      if(!data || data.length < 2){ 
+        macchine = [];
+        renderDashboard(); 
+        return; 
+      }
+      var headers = data[0];
+      macchine = data.slice(1).map(function(row){
+        var obj = {};
+        headers.forEach(function(h,i){ obj[h] = row[i]; });
+        return obj;
+      });
+      renderDashboard();
+    })
+    .catch(function(){
+      document.getElementById('dashboard-list').innerHTML = '<div class="empty">Errore caricamento. Controlla la connessione.</div>';
+    });
+}
+
+function renderDashboard() {
+  var list = document.getElementById('dashboard-list');
+  var attive = macchine.filter(function(m){ return m.Stato !== 'CHIUSA'; });
+  var chiuse = macchine.filter(function(m){ return m.Stato === 'CHIUSA'; });
+  
+  if(macchine.length === 0){
+    list.innerHTML = '<div class="empty">Nessuna macchina in officina.<br>Clicca "+ Nuova" per aggiungerne una.</div>';
+    return;
+  }
+  
+  var html = '';
+  if(attive.length > 0){
+    html += '<div style="font-size:12px;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">In lavorazione ('+attive.length+')</div>';
+    attive.forEach(function(m){ html += renderCard(m); });
+  }
+  if(chiuse.length > 0){
+    html += '<div style="font-size:12px;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:.5px;margin:16px 0 8px">Chiuse ('+chiuse.length+')</div>';
+    chiuse.forEach(function(m){ html += renderCard(m); });
+  }
+  list.innerHTML = html;
+}
+
+function renderCard(m) {
+  var st = STATUS_MAP[m.Stato] || {cls:'s1', label:m.Stato};
+  var giorni = '';
+  if(m.DataEntrata){
+    var parts = m.DataEntrata.toString().split('/');
+    if(parts.length===3){
+      var d = new Date(parts[2],parts[1]-1,parts[0]);
+      var diff = Math.floor((new Date()-d)/86400000);
+      giorni = ' · '+diff+' gg';
+    }
+  }
+  return '<div class="machine-card">'+
+    '<div class="machine-header">'+
+      '<div class="machine-info">'+
+        '<h3>'+m.Cliente+'</h3>'+
+        '<p>'+m.TipoMacchina+' '+m.Marca+' '+m.Modello+(m.Matricola?' — '+m.Matricola:'')+'</p>'+
+        '<p style="color:#94A3B8;font-size:12px">Entrata: '+m.DataEntrata+giorni+'</p>'+
+      '</div>'+
+      '<span class="status-badge '+st.cls+'">'+st.label+'</span>'+
+    '</div>'+
+    '<div class="machine-body">'+
+      '<div class="machine-detail"><strong>Problema:</strong> '+m.ProblemaDichiarato+'</div>'+
+      (m.MaterialeNecessario?'<div class="machine-detail"><strong>Materiale:</strong> '+m.MaterialeNecessario+'</div>':'')+
+      '<div class="machine-actions">'+
+        '<button class="btn-sm" style="background:#EFF6FF;color:#2563EB" onclick="mostraDettaglio(\''+m.ID+'\')">📋 Dettaglio</button>'+
+        (m.Stato==='PRONTO RICONSEGNA'||m.Stato==='MATERIALE ARRIVATO'?'<button class="btn-sm btn-green" onclick="generaPDFConsuntivo(\''+m.ID+'\')">📄 PDF consuntivo</button>':'')+
+      '</div>'+
+    '</div>'+
+  '</div>';
+}
+
+function mostraDettaglio(id) {
+  var m = macchine.find(function(x){ return String(x.ID)===String(id); });
+  if(!m) return;
+  document.getElementById('det-title').textContent = m.Cliente+' — '+m.Modello;
+  var b = document.getElementById('det-body');
+  var rows = [
+    ['Tipo macchina', m.TipoMacchina],
+    ['Marca / Modello', m.Marca+' '+m.Modello],
+    ['Matricola', m.Matricola||'—'],
+    ['Ore macchina', m.OreMacchina||'—'],
+    ['Problema dichiarato', m.ProblemaDichiarato],
+    ['Data entrata', m.DataEntrata],
+    ['Tecnico ritiro', m.TecnicoRitiro],
+    ['Ore ritiro', m.OreRitiro||'—'],
+    ['Km ritiro', m.KmRitiro||'—'],
+    ['Stato', m.Stato],
+    ['Tecnico diagnosi', m.TecnicoDiagnosi||'—'],
+    ['Ore diagnosi', m.OreDiagnosi||'—'],
+    ['Materiale necessario', m.MaterialeNecessario||'—'],
+    ['Ore previste riparazione', m.OrePrevisteRiparazione||'—'],
+    ['Data offerta', m.DataOfferta||'—'],
+    ['Data ordine', m.DataOrdine||'—'],
+    ['Materiale arrivato', m.MaterialeArrivato||'—'],
+    ['Tecnico riparazione', m.TecnicoRiparazione||'—'],
+    ['Ore riparazione', m.OreRiparazione||'—'],
+    ['Materiale usato', m.MaterialeUsato||'—'],
+    ['Ore riconsegna', m.OreRiconsegna||'—'],
+    ['Km riconsegna', m.KmRiconsegna||'—'],
+    ['Data chiusura', m.DataChiusura||'—'],
+  ];
+  b.innerHTML = rows.map(function(r){
+    return '<div style="display:flex;gap:10px;padding:8px 0;border-bottom:1px solid #F1F5F9">'+
+      '<span style="font-size:13px;color:#64748B;min-width:150px;flex-shrink:0">'+r[0]+'</span>'+
+      '<span style="font-size:13px;color:#0F172A;font-weight:500">'+r[1]+'</span>'+
+    '</div>';
+  }).join('');
+  showModal('modal-dettaglio');
+}
+
+// ── POPULATE SELECTS ──
+function populateSelects() {
+  fetch(SCRIPT_URL + '?action=getAll&t=' + Date.now())
+    .then(function(r){ return r.json(); })
+    .then(function(data){
+      if(!data || data.length < 2){ macchine = []; return; }
+      var headers = data[0];
+      macchine = data.slice(1).map(function(row){
+        var obj = {}; headers.forEach(function(h,i){ obj[h] = row[i]; }); return obj;
+      });
+      fillSelect('diag-macchina-sel', macchine.filter(function(m){ return m.Stato==='ATTESA DIAGNOSI'; }));
+      fillSelect('rip-macchina-sel', macchine.filter(function(m){ 
+        return m.Stato==='PRONTO PER RIPARAZIONE'||m.Stato==='MATERIALE ARRIVATO'; 
+      }));
+      fillSelect('fran-macchina-sel', macchine.filter(function(m){ return m.Stato!=='CHIUSA'; }));
+    }).catch(function(){});
+}
+
+function fillSelect(selId, list) {
+  var sel = document.getElementById(selId);
+  sel.innerHTML = '<option value="">Seleziona macchina...</option>';
+  list.forEach(function(m){
+    var opt = document.createElement('option');
+    opt.value = m.ID;
+    opt.textContent = m.Cliente+' — '+m.Marca+' '+m.Modello+' ('+m.Stato+')';
+    sel.appendChild(opt);
+  });
+}
+
+// ── NUOVA MACCHINA ──
+function onTipoChange() {}
+
+function salvaNuova() {
+  var tipo = document.getElementById('nm-tipo').value;
+  var marca = document.getElementById('nm-marca').value.trim();
+  var modello = document.getElementById('nm-modello').value.trim();
+  var cliente = document.getElementById('nm-cliente').value.trim();
+  var problema = document.getElementById('nm-problema').value.trim();
+  var data = document.getElementById('nm-data').value.trim();
+  var tecnico = document.getElementById('nm-tecnico').value;
+  
+  if(!tipo||!marca||!modello||!cliente||!problema||!data||!tecnico){
+    showToast('⚠ Compila tutti i campi obbligatori'); return;
+  }
+  
+  var payload = {
+    action:'nuova', tipoMacchina:tipo, marca:marca, modello:modello,
+    matricola:document.getElementById('nm-matricola').value,
+    oreMacchina:document.getElementById('nm-ore').value,
+    cliente:cliente, problemaDichiarato:problema, dataEntrata:data,
+    tecnicoRitiro:tecnico,
+    oreRitiro:document.getElementById('nm-ore-ritiro').value,
+    kmRitiro:document.getElementById('nm-km-ritiro').value,
+  };
+  
+  inviaPost(payload, function(){
+    showToast('✓ Macchina registrata');
+    closeModal('modal-nuova');
+    loadDashboard();
+    ['nm-tipo','nm-marca','nm-modello','nm-matricola','nm-cliente','nm-problema','nm-data','nm-tecnico'].forEach(function(id){
+      var el = document.getElementById(id);
+      if(el) el.value='';
+    });
+  });
+}
+
+// ── DIAGNOSI ──
+function loadDiagMacchina() {
+  var id = document.getElementById('diag-macchina-sel').value;
+  if(!id){ document.getElementById('diag-form').style.display='none'; return; }
+  var m = macchine.find(function(x){ return String(x.ID)===String(id); });
+  if(!m) return;
+  document.getElementById('diag-form').style.display='block';
+  selectedId = id;
+  buildChecklist(m.TipoMacchina);
+}
+
+function buildChecklist(tipo) {
+  var items = CHECKLIST[tipo] || [];
+  var cl = document.getElementById('diag-checklist');
+  var html = '<div class="check-header"><span>✓</span><span>Componente</span><span>Codice</span></div>';
+  items.forEach(function(item, i){
+    html += '<div class="check-item" id="ci-'+i+'" onclick="toggleCheck('+i+')">'+
+      '<input type="checkbox" id="chk-'+i+'" onclick="event.stopPropagation();toggleCheck('+i+')">'+
+      '<span class="check-label">'+item+'</span>'+
+      '<input type="text" class="check-code" id="cod-'+i+'" placeholder="Codice" onclick="event.stopPropagation()" oninput="event.stopPropagation()">'+
+    '</div>';
+  });
+  html += '<div class="check-item"><input type="checkbox" id="chk-altro" onclick="event.stopPropagation()"><span class="check-label"><input type="text" id="altro-desc" placeholder="Altro (specificare)..." style="border:none;padding:0;font-size:14px;width:100%" onclick="event.stopPropagation()"></span><input type="text" class="check-code" id="cod-altro" placeholder="Codice" onclick="event.stopPropagation()"></div>';
+  cl.innerHTML = html;
+}
+
+function toggleCheck(i) {
+  var chk = document.getElementById('chk-'+i);
+  chk.checked = !chk.checked;
+  var row = document.getElementById('ci-'+i);
+  row.classList.toggle('checked', chk.checked);
+}
+
+function getMaterialeChecklist() {
+  var items = CHECKLIST[document.getElementById('diag-macchina-sel').options[document.getElementById('diag-macchina-sel').selectedIndex]?.dataset?.tipo || ''] || [];
+  var risultato = [];
+  var allItems = document.getElementById('diag-checklist').querySelectorAll('.check-item');
+  allItems.forEach(function(row, i){
+    var chk = row.querySelector('input[type="checkbox"]');
+    if(chk && chk.checked){
+      var label = row.querySelector('.check-label');
+      var code = row.querySelector('.check-code');
+      var desc = (label ? label.textContent || label.querySelector('input')?.value : '') || '';
+      var cod = (code ? code.value : '') || '';
+      risultato.push(desc.trim() + (cod ? ' ['+cod+']' : ''));
+    }
+  });
+  return risultato.join('\n');
+}
+
+function salvaDiagnosi() {
+  var tecnico = document.getElementById('diag-tecnico').value;
+  var ore = document.getElementById('diag-ore').value;
+  var orePrev = document.getElementById('diag-ore-prev').value;
+  var tipo = document.getElementById('diag-tipo').value;
+  
+  if(!tecnico||!ore||!orePrev){ showToast('⚠ Compila tutti i campi obbligatori'); return; }
+  
+  // Raccoglie checklist
+  var materiale = [];
+  var checks = document.getElementById('diag-checklist').querySelectorAll('.check-item');
+  checks.forEach(function(row){
+    var chk = row.querySelector('input[type="checkbox"]');
+    if(chk && chk.checked){
+      var labelEl = row.querySelector('.check-label');
+      var inputEl = labelEl ? labelEl.querySelector('input') : null;
+      var desc = inputEl ? inputEl.value : (labelEl ? labelEl.textContent : '');
+      var cod = row.querySelector('.check-code');
+      var codVal = cod ? cod.value.trim() : '';
+      materiale.push(desc.trim() + (codVal ? ' ['+codVal+']' : ''));
+    }
+  });
+  var note = document.getElementById('diag-note').value.trim();
+  if(note) materiale.push('Altro: '+note);
+  
+  var payload = {
+    action:'diagnosi', id:selectedId, tecnico:tecnico,
+    ore:ore, materiale:materiale.join('\n'),
+    orePreviste:orePrev, tipoRiparazione:tipo
+  };
+  
+  inviaPost(payload, function(){
+    showToast('✓ Diagnosi salvata');
+    document.getElementById('diag-macchina-sel').value='';
+    document.getElementById('diag-form').style.display='none';
+    selectedId=null;
+  });
+}
+
+// ── FRANCESCA ──
+function loadFranMacchina() {
+  var id = document.getElementById('fran-macchina-sel').value;
+  if(!id){ document.getElementById('fran-form').style.display='none'; return; }
+  var m = macchine.find(function(x){ return String(x.ID)===String(id); });
+  if(!m) return;
+  document.getElementById('fran-form').style.display='block';
+  document.getElementById('fran-mac-title').textContent = m.Cliente+' — '+m.Marca+' '+m.Modello;
+  selectedId = id;
+  
+  // Mostra PDF offerta se ha diagnosi
+  var pdfCard = document.getElementById('fran-pdf-card');
+  pdfCard.style.display = m.MaterialeNecessario ? 'block' : 'none';
+  
+  document.getElementById('fran-stato').addEventListener('change', function(){
+    document.getElementById('fran-dettaglio-wrap').style.display = 
+      this.value === 'MATERIALE PARZIALE' ? 'block' : 'none';
+  });
+}
+
+function salvaStatoFrancesca() {
+  var stato = document.getElementById('fran-stato').value;
+  var dettaglio = document.getElementById('fran-dettaglio').value.trim();
+  
+  var payload = {
+    action:'aggiorna_stato', id:selectedId, stato:stato,
+    data:new Date().toLocaleDateString('it-IT'),
+    dettaglio:dettaglio
+  };
+  
+  inviaPost(payload, function(){
+    showToast('✓ Stato aggiornato: '+stato);
+    document.getElementById('fran-macchina-sel').value='';
+    document.getElementById('fran-form').style.display='none';
+    selectedId=null;
+  });
+}
+
+function generaPDFOfferta() {
+  var m = macchine.find(function(x){ return String(x.ID)===String(selectedId); });
+  if(!m) return;
+  generaPDF('offerta', m);
+}
+
+// ── RIPARAZIONE ──
+function loadRipMacchina() {
+  var id = document.getElementById('rip-macchina-sel').value;
+  if(!id){ document.getElementById('rip-form').style.display='none'; return; }
+  document.getElementById('rip-form').style.display='block';
+  selectedId = id;
+}
+
+function salvaRiparazione() {
+  var tecnico = document.getElementById('rip-tecnico').value;
+  var ore = document.getElementById('rip-ore').value;
+  var materiale = document.getElementById('rip-materiale').value.trim();
+  
+  if(!tecnico||!ore||!materiale){ showToast('⚠ Compila tutti i campi obbligatori'); return; }
+  
+  var payload = {
+    action:'riparazione', id:selectedId, tecnico:tecnico,
+    ore:ore, materiale:materiale,
+    note:document.getElementById('rip-note').value.trim(),
+    oreRiconsegna:document.getElementById('rip-ore-ric').value,
+    kmRiconsegna:document.getElementById('rip-km-ric').value,
+    data:new Date().toLocaleDateString('it-IT')
+  };
+  
+  // Recupera macchina per PDF
+  var m = macchine.find(function(x){ return String(x.ID)===String(selectedId); });
+  
+  inviaPost(payload, function(){
+    showToast('✓ Riparazione chiusa');
+    if(m){
+      m.TecnicoRiparazione = tecnico;
+      m.OreRiparazione = ore;
+      m.MaterialeUsato = materiale;
+      m.OreRiconsegna = document.getElementById('rip-ore-ric').value;
+      m.KmRiconsegna = document.getElementById('rip-km-ric').value;
+      m.DataChiusura = new Date().toLocaleDateString('it-IT');
+      generaPDF('consuntivo', m);
+    }
+    document.getElementById('rip-macchina-sel').value='';
+    document.getElementById('rip-form').style.display='none';
+    selectedId=null;
+  });
+}
+
+function generaPDFConsuntivo(id) {
+  var m = macchine.find(function(x){ return String(x.ID)===String(id); });
+  if(m) generaPDF('consuntivo', m);
+}
+
+// ── PDF ──
+function generaPDF(tipo, m) {
+  var jsPDF = window.jspdf.jsPDF;
+  var doc = new jsPDF({orientation:'p',unit:'mm',format:'a4'});
+  var ML=15, PW=180, y=15;
+  
+  function riga(label, val, bold) {
+    doc.setFont('helvetica', bold?'bold':'normal');
+    doc.setFontSize(9); doc.setTextColor(100,100,100);
+    doc.text(label+':', ML, y);
+    doc.setFont('helvetica','normal'); doc.setTextColor(30,30,30);
+    var lines = doc.splitTextToSize(String(val||'—'), PW-50);
+    doc.text(lines, ML+45, y);
+    y += lines.length*5 + 2;
+    if(y > 270){ doc.addPage(); y=15; }
+  }
+  
+  function sezione(tit) {
+    y+=4;
+    doc.setFillColor(26,47,75);
+    doc.rect(ML,y,PW,7,'F');
+    doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(255,255,255);
+    doc.text(tit.toUpperCase(), ML+3, y+5);
+    y+=11;
+    doc.setTextColor(30,30,30);
+  }
+  
+  // INTESTAZIONE
+  doc.setFillColor(26,47,75); doc.rect(0,0,210,28,'F');
+  doc.setFont('helvetica','bold'); doc.setFontSize(16); doc.setTextColor(255,255,255);
+  doc.text('C.L.A. COMPRESSORI S.r.l.', ML, 12);
+  doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(148,163,184);
+  doc.text('Via del Poggio 2 – 04011 Aprilia (LT)  ·  Tel. 06 86925851  ·  Assistenza 24/7: +39 392 74 42 285', ML, 19);
+  doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor(255,255,255);
+  var titPDF = tipo==='offerta' ? 'REPORT DIAGNOSI — OFFERTA' : 'CONSUNTIVO LAVORO OFFICINA';
+  doc.text(titPDF, 210-ML, 25, {align:'right'});
+  y=35;
+  
+  // DATI MACCHINA
+  sezione('Dati macchina e cliente');
+  riga('Cliente', m.Cliente);
+  riga('Tipo macchina', m.TipoMacchina);
+  riga('Marca / Modello', m.Marca+' '+m.Modello);
+  riga('Matricola', m.Matricola||'—');
+  riga('Ore macchina', m.OreMacchina ? m.OreMacchina+' h' : '—');
+  riga('Problema dichiarato', m.ProblemaDichiarato);
+  riga('Data entrata', m.DataEntrata);
+  
+  // RITIRO
+  sezione('Ritiro');
+  riga('Tecnico', m.TecnicoRitiro);
+  riga('Ore ritiro', m.OreRitiro ? m.OreRitiro+' h' : '—');
+  riga('Km ritiro', m.KmRitiro ? m.KmRitiro+' km' : '—');
+  
+  // DIAGNOSI
+  sezione('Diagnosi');
+  riga('Tecnico', m.TecnicoDiagnosi||'—');
+  riga('Ore diagnosi', m.OreDiagnosi ? m.OreDiagnosi+' h' : '—');
+  riga('Ore previste riparazione', m.OrePrevisteRiparazione ? m.OrePrevisteRiparazione+' h' : '—');
+  riga('Materiale necessario', m.MaterialeNecessario||'—');
+  
+  if(tipo==='consuntivo'){
+    // RIPARAZIONE
+    sezione('Riparazione');
+    riga('Tecnico', m.TecnicoRiparazione||'—');
+    riga('Ore riparazione', m.OreRiparazione ? m.OreRiparazione+' h' : '—');
+    riga('Materiale usato', m.MaterialeUsato||'—');
+    
+    sezione('Riconsegna');
+    riga('Ore riconsegna', m.OreRiconsegna ? m.OreRiconsegna+' h' : '—');
+    riga('Km riconsegna', m.KmRiconsegna ? m.KmRiconsegna+' km' : '—');
+    riga('Data chiusura', m.DataChiusura||'—');
+    
+    // TOTALE ORE
+    sezione('Riepilogo ore e km');
+    var totOre = (+m.OreRitiro||0) + (+m.OreDiagnosi||0) + (+m.OreRiparazione||0) + (+m.OreRiconsegna||0);
+    var totKm = (+m.KmRitiro||0) + (+m.KmRiconsegna||0);
+    riga('Totale ore lavorate', totOre.toFixed(1)+' h');
+    riga('Totale km percorsi', totKm+' km');
+  }
+  
+  // PIE DI PAGINA
+  var pageCount = doc.internal.getNumberOfPages();
+  for(var i=1;i<=pageCount;i++){
+    doc.setPage(i);
+    doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(150,150,150);
+    doc.text('C.L.A. Compressori S.r.l.  ·  Documento interno  ·  Pag. '+i+'/'+pageCount, 105, 290, {align:'center'});
+  }
+  
+  var nomefile = (tipo==='offerta'?'offerta_':'consuntivo_')+(m.Cliente||'CLA').replace(/\s/g,'_')+'_'+m.Modello+'.pdf';
+  try {
+    var blob = doc.output('blob');
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href=url; a.download=nomefile; a.target='_blank';
+    document.body.appendChild(a); a.click();
+    setTimeout(function(){ document.body.removeChild(a); URL.revokeObjectURL(url); },1000);
+    showToast('✓ PDF generato');
+  } catch(e) {
+    doc.save(nomefile);
+    showToast('✓ PDF salvato');
+  }
+}
+
+// ── INVIO POST ──
+function inviaPost(payload, callback) {
+  fetch(SCRIPT_URL, {
+    method:'POST',
+    body: JSON.stringify(payload),
+    headers:{'Content-Type':'application/json'}
+  }).then(function(){ 
+    if(callback) callback(); 
+  }).catch(function(){
+    // Prova con immagine GET come fallback
+    var params = Object.keys(payload).map(function(k){ return k+'='+encodeURIComponent(payload[k]); }).join('&');
+    var img = new Image();
+    img.src = SCRIPT_URL + '?' + params;
+    setTimeout(function(){ if(callback) callback(); }, 1500);
+  });
+}
+
+// Init
+loadDashboard();
+</script>
+</body>
+</html>
