@@ -386,28 +386,31 @@ function showToast(msg) {
 }
 
 // ── CARICA DATI ──
+function jsonp(params, callback) {
+  var cbName = '_cb_' + Date.now();
+  window[cbName] = function(data) {
+    callback(data);
+    delete window[cbName];
+    var s = document.getElementById(cbName);
+    if(s) s.parentNode.removeChild(s);
+  };
+  var script = document.createElement('script');
+  script.id = cbName;
+  script.src = SCRIPT_URL + '?' + params + '&callback=' + cbName;
+  script.onerror = function() { callback(null); };
+  document.head.appendChild(script);
+}
+
 function loadDashboard() {
   document.getElementById('dashboard-list').innerHTML = '<div class="loading">Caricamento...</div>';
-  var img = new Image();
-  img.src = SCRIPT_URL + '?action=getAll&t=' + Date.now();
-  
-  var script = document.createElement('script');
-  window._cbDash = function(data) {
+  jsonp('action=getAll&t=' + Date.now(), function(data) {
     if(!data || data.length < 2){ macchine=[]; renderDashboard(); return; }
     var headers = data[0];
     macchine = data.slice(1).map(function(row){
       var obj={}; headers.forEach(function(h,i){ obj[h]=row[i]; }); return obj;
     });
     renderDashboard();
-    delete window._cbDash;
-  };
-  fetch(SCRIPT_URL + '?action=getAll&t=' + Date.now())
-    .then(function(r){ return r.json(); })
-    .then(function(data){ window._cbDash(data); })
-    .catch(function(){
-      // Fallback: prova con no-cors mode
-      document.getElementById('dashboard-list').innerHTML = '<div class="empty">⚠ Errore connessione Google Sheet.<br><small>Verifica che il deployment sia impostato su "Chiunque".</small></div>';
-    });
+  });
 }
 
 function renderDashboard() {
@@ -859,12 +862,9 @@ function inviaPost(payload, callback) {
   var params = Object.keys(payload).map(function(k){ 
     return k+'='+encodeURIComponent(payload[k]||''); 
   }).join('&');
-  var url = SCRIPT_URL + '?' + params;
-  var img = new Image();
-  img.onload = function(){ if(callback) callback(); };
-  img.onerror = function(){ if(callback) callback(); };
-  img.src = url;
-  setTimeout(function(){ if(callback) callback(); }, 2000);
+  jsonp(params, function(data) {
+    if(callback) callback();
+  });
 }
 
 // Init
