@@ -446,6 +446,18 @@ function renderCard(m) {
       giorni = ' · '+diff+' gg';
     }
   }
+  // Blocco stato lavorazione
+  var blocoStato = '';
+  if(m.Stato==='ATTESA DIAGNOSI') blocoStato='Attesa diagnosi tecnico';
+  else if(m.Stato==='ATTESA OFFERTA/ORDINE') blocoStato='Francesca deve preparare offerta o ordine';
+  else if(m.Stato==='OFFERTA FATTA') blocoStato='Offerta inviata - attesa risposta cliente';
+  else if(m.Stato==='ORDINE FATTO') blocoStato='Ordine fatto - attesa materiale';
+  else if(m.Stato==='MATERIALE PARZIALE') blocoStato='Materiale parzialmente arrivato';
+  else if(m.Stato==='MATERIALE ARRIVATO') blocoStato='Materiale arrivato - pronta per riparazione';
+  else if(m.Stato==='PRONTO PER RIPARAZIONE') blocoStato='Pronta per riparazione';
+  else if(m.Stato==='PRONTO RICONSEGNA') blocoStato='Riparata - da riconsegnare';
+  else if(m.Stato==='CHIUSA') blocoStato='Lavoro chiuso';
+
   return '<div class="machine-card">'+
     '<div class="machine-header">'+
       '<div class="machine-info">'+
@@ -456,11 +468,14 @@ function renderCard(m) {
       '<span class="status-badge '+st.cls+'">'+st.label+'</span>'+
     '</div>'+
     '<div class="machine-body">'+
+      '<div style="background:#F8FAFC;border-left:3px solid #2563EB;padding:8px 12px;border-radius:4px;margin-bottom:8px;font-size:13px;color:#1D4ED8">'+blocoStato+'</div>'+
       '<div class="machine-detail"><strong>Problema:</strong> '+m.ProblemaDichiarato+'</div>'+
+      (m.TecnicoDiagnosi?'<div class="machine-detail"><strong>Tecnico diagnosi:</strong> '+m.TecnicoDiagnosi+'</div>':'')+
       (m.MaterialeNecessario?'<div class="machine-detail"><strong>Materiale:</strong> '+m.MaterialeNecessario+'</div>':'')+
+      (m.TecnicoRiparazione?'<div class="machine-detail"><strong>Tecnico riparazione:</strong> '+m.TecnicoRiparazione+'</div>':'')+
       '<div class="machine-actions">'+
-        '<button class="btn-sm" style="background:#EFF6FF;color:#2563EB" onclick="mostraDettaglio(\''+m.ID+'\')">📋 Dettaglio</button>'+
-        (m.Stato==='PRONTO RICONSEGNA'||m.Stato==='MATERIALE ARRIVATO'?'<button class="btn-sm btn-green" onclick="generaPDFConsuntivo(\''+m.ID+'\')">📄 PDF consuntivo</button>':'')+
+        '<button class="btn-sm" style="background:#EFF6FF;color:#2563EB" onclick="mostraDettaglio(this.dataset.id)" data-id="'+m.ID+'">Dettaglio</button>'+
+        (m.Stato==='CHIUSA'?'<button class="btn-sm btn-green" onclick="generaPDFConsuntivo(this.dataset.id)" data-id="'+m.ID+'">PDF consuntivo</button>':'')+
       '</div>'+
     '</div>'+
   '</div>';
@@ -563,11 +578,13 @@ function salvaNuova() {
   inviaPost(payload, function(){
     showToast('✓ Macchina registrata');
     closeModal('modal-nuova');
-    loadDashboard();
-    ['nm-tipo','nm-marca','nm-modello','nm-matricola','nm-cliente','nm-problema','nm-data','nm-tecnico'].forEach(function(id){
+    ['nm-tipo','nm-marca','nm-modello','nm-matricola','nm-cliente','nm-problema','nm-data','nm-tecnico',
+     'nm-ore','nm-ore-ritiro','nm-km-ritiro'].forEach(function(id){
       var el = document.getElementById(id);
       if(el) el.value='';
     });
+    // Ricarica dashboard dopo 2 secondi (tempo per Google Sheet di aggiornarsi)
+    setTimeout(function(){ loadDashboard(); }, 2500);
   });
 }
 
@@ -764,7 +781,7 @@ function generaPDF(tipo, m) {
     doc.setFontSize(9); doc.setTextColor(100,100,100);
     doc.text(label+':', ML, y);
     doc.setFont('helvetica','normal'); doc.setTextColor(30,30,30);
-    var lines = doc.splitTextToSize(String(val||'—'), PW-50);
+    var lines = doc.splitTextToSize(String(val||'-'), PW-50);
     doc.text(lines, ML+45, y);
     y += lines.length*5 + 2;
     if(y > 270){ doc.addPage(); y=15; }
@@ -787,7 +804,7 @@ function generaPDF(tipo, m) {
   doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(148,163,184);
   doc.text('Via del Poggio 2 – 04011 Aprilia (LT)  ·  Tel. 06 86925851  ·  Assistenza 24/7: +39 392 74 42 285', ML, 19);
   doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor(255,255,255);
-  var titPDF = tipo==='offerta' ? 'REPORT DIAGNOSI — OFFERTA' : 'CONSUNTIVO LAVORO OFFICINA';
+  var titPDF = tipo==='offerta' ? 'REPORT DIAGNOSI - OFFERTA' : 'CONSUNTIVO LAVORO OFFICINA';
   doc.text(titPDF, 210-ML, 25, {align:'right'});
   y=35;
   
@@ -859,44 +876,14 @@ function generaPDF(tipo, m) {
 
 // ── INVIO POST ──
 function inviaPost(payload, callback) {
-  // Crea un iframe nascosto per il POST
-  var iframeName = 'frm_' + Date.now();
-  var iframe = document.createElement('iframe');
-  iframe.name = iframeName;
-  iframe.style.display = 'none';
-  document.body.appendChild(iframe);
-  
-  var form = document.createElement('form');
-  form.method = 'POST';
-  form.action = SCRIPT_URL;
-  form.target = iframeName;
-  
-  Object.keys(payload).forEach(function(k) {
-    var input = document.createElement('input');
-    input.type = 'hidden';
-    input.name = k;
-    input.value = payload[k] || '';
-    form.appendChild(input);
-  });
-  
-  document.body.appendChild(form);
-  
-  iframe.onload = function() {
-    setTimeout(function() {
-      document.body.removeChild(form);
-      document.body.removeChild(iframe);
-      if(callback) callback();
-    }, 500);
-  };
-  
-  form.submit();
-  
-  // Timeout di sicurezza
-  setTimeout(function() {
-    try { document.body.removeChild(form); } catch(e) {}
-    try { document.body.removeChild(iframe); } catch(e) {}
+  var params = Object.keys(payload).map(function(k){
+    return encodeURIComponent(k) + '=' + encodeURIComponent((payload[k]||'').toString().substring(0,500));
+  }).join('&');
+  jsonp(params, function(data) {
     if(callback) callback();
-  }, 3000);
+  });
+  // Timeout sicurezza
+  setTimeout(function(){ if(callback) callback(); }, 4000);
 }
 
 // Init
