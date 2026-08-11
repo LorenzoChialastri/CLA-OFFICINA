@@ -859,12 +859,44 @@ function generaPDF(tipo, m) {
 
 // ── INVIO POST ──
 function inviaPost(payload, callback) {
-  var params = Object.keys(payload).map(function(k){ 
-    return k+'='+encodeURIComponent(payload[k]||''); 
-  }).join('&');
-  jsonp(params, function(data) {
-    if(callback) callback();
+  // Crea un iframe nascosto per il POST
+  var iframeName = 'frm_' + Date.now();
+  var iframe = document.createElement('iframe');
+  iframe.name = iframeName;
+  iframe.style.display = 'none';
+  document.body.appendChild(iframe);
+  
+  var form = document.createElement('form');
+  form.method = 'POST';
+  form.action = SCRIPT_URL;
+  form.target = iframeName;
+  
+  Object.keys(payload).forEach(function(k) {
+    var input = document.createElement('input');
+    input.type = 'hidden';
+    input.name = k;
+    input.value = payload[k] || '';
+    form.appendChild(input);
   });
+  
+  document.body.appendChild(form);
+  
+  iframe.onload = function() {
+    setTimeout(function() {
+      document.body.removeChild(form);
+      document.body.removeChild(iframe);
+      if(callback) callback();
+    }, 500);
+  };
+  
+  form.submit();
+  
+  // Timeout di sicurezza
+  setTimeout(function() {
+    try { document.body.removeChild(form); } catch(e) {}
+    try { document.body.removeChild(iframe); } catch(e) {}
+    if(callback) callback();
+  }, 3000);
 }
 
 // Init
